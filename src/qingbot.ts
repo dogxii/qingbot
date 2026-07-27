@@ -20,6 +20,7 @@ type HandlerRecord = {
 
 type LoadedPlugin = {
   definition: PluginDefinition
+  context: QingPluginContext
   cronTasks: any[]
 }
 
@@ -183,7 +184,7 @@ export class QingBot {
     const pluginCtx = this.createPluginContext(name)
     await plugin.setup?.(pluginCtx)
     const cronTasks = this.registerCron(plugin, pluginCtx)
-    this.loadedPlugins.set(name, { definition: plugin, cronTasks })
+    this.loadedPlugins.set(name, { definition: plugin, context: pluginCtx, cronTasks })
     this.logger.info(`插件已加载：${plugin.name}@${plugin.version || '0.0.0'}`)
     return true
   }
@@ -230,6 +231,12 @@ export class QingBot {
       } catch (error) {
         this.logger.warn(`停止插件定时任务失败：${name} ${error instanceof Error ? error.message : String(error)}`)
       }
+    }
+
+    try {
+      await loaded.definition.dispose?.(loaded.context)
+    } catch (error) {
+      this.logger.warn(`卸载插件清理失败：${name} ${error instanceof Error ? error.message : String(error)}`)
     }
 
     this.loadedPlugins.delete(name)

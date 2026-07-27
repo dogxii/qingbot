@@ -18,6 +18,7 @@ export interface PluginDefinition {
   name: string
   version?: string
   setup?: (ctx: QingPluginContext) => Awaitable<void>
+  dispose?: (ctx: QingPluginContext) => Awaitable<void>
   cron?: CronTask[]
 }
 
