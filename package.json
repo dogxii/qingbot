@@ -1,0 +1,37 @@
+{
+  "name": "qingbot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A lightweight QQ official bot framework with a simple plugin layer.",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": "./dist/src/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/main.ts",
+    "start": "node dist/src/main.js",
+    "build": "node scripts/clean-dist.mjs && tsc && tsc-alias && node scripts/copy-plugin-assets.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
+    "node-cron": "^4.2.1",
+    "qq-official-bot": "^1.2.3"
+  },
+  "overrides": {
+    "axios": "$axios"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/node-cron": "^3.0.11",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

@@ -1,0 +1,9 @@
+.env
+qingbot.config.json
+node_modules/
+dist/
+.playwright-cli/
+output/
+.DS_Store
+*.tsbuildinfo
+*.log
