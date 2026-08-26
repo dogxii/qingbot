@@ -128,7 +128,7 @@ export class QingBot {
 
   async start() {
     if (!this.config.appID || !this.config.appSecret) {
-      throw new Error('缺少 appID / appSecret。请填写根目录 config.json。')
+      throw new Error('缺少 appID / appSecret。请运行 npm run init，或编辑根目录 config.json。')
     }
 
     this.state = 'starting'

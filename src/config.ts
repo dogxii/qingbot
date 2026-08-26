@@ -22,6 +22,11 @@ function readNumber(value: unknown) {
   return Number.isFinite(number) ? number : undefined
 }
 
+function readString(value: unknown, placeholders: string[] = []) {
+  const text = String(value || '').trim()
+  return text && !placeholders.includes(text) ? text : ''
+}
+
 function readLogLevel(value: unknown): QingBotLogLevel | undefined {
   const level = String(value || '').toLowerCase() as QingBotLogLevel
   return LOG_LEVELS.has(level) ? level : undefined
@@ -35,8 +40,8 @@ export function loadConfig(cwd = process.cwd()): QingBotConfig {
   const fileConfig = loadRawConfig(cwd)
 
   const config: QingBotConfig = {
-    appID: fileConfig.appID || fileConfig.appId || '',
-    appSecret: fileConfig.appSecret || fileConfig.secret || '',
+    appID: readString(fileConfig.appID ?? fileConfig.appId, ['YOUR_QQ_BOT_APP_ID']),
+    appSecret: readString(fileConfig.appSecret ?? fileConfig.secret, ['YOUR_QQ_BOT_APP_SECRET']),
     sandbox: readBoolean(fileConfig.sandbox),
     botName: fileConfig.botName || fileConfig.name || 'QingBot',
     debug: readBoolean(fileConfig.debug),

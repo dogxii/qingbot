@@ -6,11 +6,11 @@
 
 ```bash
 npm install
-cp config.example.json config.json
+npm run init
 npm run dev
 ```
 
-首次运行前，编辑根目录的 `config.json`，填入 QQ 官方机器人的 `appID` 和 `appSecret`。`config.json` 默认不提交，避免把密钥带进 Git。
+`npm run init` 会交互式创建或更新根目录的 `config.json`，可填写 QQ 官方机器人的 `appID`、`appSecret`、插件列表、管理员 ID 和 Web 管理台 token。`config.json` 默认不提交，避免把密钥带进 Git。
 
 编译运行：
 
@@ -61,7 +61,7 @@ QingBot 读取根目录的 `config.json`，仓库里的 `config.example.json` �
 
 高级接入项按需配置：`logLevel`、`accessTokenUrl`、`gatewayUrl`、`timeout`、`maxRetry`、`heartbeatInterval`、`maxRetries`、`reconnectDelay`。通常不需要改。
 
-可选本地覆盖文件：`config.local.json`。它会合并覆盖根 `config.json`，适合放本机密钥或个人调试项。
+已有 `config.json` 时再次运行 `npm run init` 会以当前配置作为默认值，按回车即可保留。可选本地覆盖文件：`config.local.json`。它会合并覆盖根 `config.json`，适合放本机密钥或个人调试项。
 
 ## 命令
 

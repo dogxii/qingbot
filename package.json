@@ -9,6 +9,7 @@
     ".": "./dist/src/index.js"
   },
   "scripts": {
+    "init": "node scripts/init.mjs",
     "dev": "tsx src/main.ts",
     "start": "node dist/src/main.js",
     "build": "node scripts/clean-dist.mjs && tsc && tsc-alias && node scripts/copy-plugin-assets.mjs",
