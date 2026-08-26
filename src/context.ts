@@ -3,10 +3,28 @@ import path from 'path'
 import axios from 'axios'
 import { dedent, segment } from './plugin'
 import { UnsupportedAbilityError } from './errors'
-import type { QingPluginContext, QingBotConfig } from './types'
+import type { Awaitable, QingCommandHandler, QingCommandOptions, QingMarkdownParams, QingPluginContext, QingBotConfig, Sendable } from './types'
 import type { Logger } from './logger'
 
 type AliasKind = 'users' | 'groups'
+
+export interface RuntimeSendTarget {
+  type: 'user' | 'group' | 'channel' | 'direct'
+  id: string
+}
+
+export type RuntimeSendInterceptor = (
+  target: RuntimeSendTarget,
+  message: Sendable,
+  source?: any,
+) => Awaitable<any>
+
+export type RuntimeSendObserver = (
+  target: RuntimeSendTarget,
+  message: Sendable,
+  source?: any,
+  result?: any,
+) => Awaitable<void>
 
 function toId(id: string | number | undefined): string {
   return id == null ? '' : String(id)
@@ -18,6 +36,9 @@ function reverseLookup(record: Record<string, string> | undefined, value: string
 }
 
 export class QingBotRuntime {
+  private sendInterceptor?: RuntimeSendInterceptor
+  private readonly sendObservers = new Set<RuntimeSendObserver>()
+
   constructor(
     private readonly officialBot: any,
     private readonly config: QingBotConfig,
@@ -30,6 +51,14 @@ export class QingBotRuntime {
 
   get nickname() {
     return this.config.botName || 'QingBot'
+  }
+
+  get raw() {
+    return this.officialBot
+  }
+
+  get client() {
+    return this.officialBot
   }
 
   resolveUserId(id: string | number): string {
@@ -48,18 +77,182 @@ export class QingBotRuntime {
     return this.displayAlias('groups', officialId)
   }
 
-  async sendPrivateMsg(userId: string | number, message: any, source?: any) {
+  group(id: string | number) {
+    const resolved = this.resolveGroupId(id)
+    return this.getNativeEntry('group', resolved) || this.withNormalizedSend({
+      id: resolved,
+      group_id: resolved,
+      send: (message: Sendable, source?: any) => this.sendGroupMsg(resolved, message, source),
+      recall: (messageId: string) => this.recallGroupMsg(resolved, messageId),
+      upload: (fileData: string | Buffer, options: Record<string, any> = {}) => this.uploadMedia(resolved, 'group', fileData, options),
+      info: () => this.callBotMethod('getGroupInfo', resolved),
+      botState: () => this.callBotMethod('getGroupBotState', resolved),
+    })
+  }
+
+  user(id: string | number) {
+    const resolved = this.resolveUserId(id)
+    return this.getNativeEntry('user', resolved) || this.withNormalizedSend({
+      id: resolved,
+      user_id: resolved,
+      send: (message: Sendable, source?: any) => this.sendPrivateMsg(resolved, message, source),
+      recall: (messageId: string) => this.recallPrivateMsg(resolved, messageId),
+      upload: (fileData: string | Buffer, options: Record<string, any> = {}) => this.uploadMedia(resolved, 'user', fileData, options),
+    })
+  }
+
+  channel(id: string | number) {
+    const resolved = String(id)
+    return this.getNativeEntry('channel', resolved) || this.withNormalizedSend({
+      id: resolved,
+      channel_id: resolved,
+      send: (message: Sendable, source?: any) => this.sendGuildMsg(resolved, message, source),
+      recall: (messageId: string, hideWarning?: boolean) => this.officialBot.recallGuildMessage(resolved, messageId, hideWarning),
+      info: () => this.callBotMethod('getChannelInfo', resolved),
+      update: (updateInfo: Record<string, any>) => this.callBotMethod('updateChannel', resolved, updateInfo),
+      delete: () => this.callBotMethod('deleteChannel', resolved),
+    })
+  }
+
+  direct(guildId: string | number) {
+    const resolved = String(guildId)
+    return this.getNativeEntry('direct', resolved) || this.withNormalizedSend({
+      id: resolved,
+      guild_id: resolved,
+      send: (message: Sendable, source?: any) => this.sendDirectMsg(resolved, message, source),
+      recall: (messageId: string, hideTip?: boolean) => this.recallDirectMsg(resolved, messageId, hideTip),
+      getMessage: (messageId: string) => this.callBotMethod('getDirectMessage', resolved, messageId),
+    })
+  }
+
+  guild(id: string | number) {
+    const resolved = String(id)
+    return this.getNativeEntry('guild', resolved) || {
+      id: resolved,
+      guild_id: resolved,
+      info: () => this.callBotMethod('getGuildInfo', resolved),
+      channels: () => this.callBotMethod('getChannelList', resolved),
+      roles: () => this.callBotMethod('getGuildRoles', resolved),
+      mute: (seconds: number, endTime?: number) => this.callBotMethod('muteGuild', resolved, seconds, endTime),
+      unmute: () => this.callBotMethod('unMuteGuild', resolved),
+    }
+  }
+
+  async sendPrivateMsg(userId: string | number, message: Sendable, source?: any) {
     const resolved = this.resolveUserId(userId)
-    return this.officialBot.sendPrivateMessage(resolved, this.normalizeSendable(message), source)
+    const payload = this.normalizeSendable(message)
+    if (this.sendInterceptor) return this.sendInterceptor({ type: 'user', id: resolved }, payload, source)
+    return this.sendWithObservers(
+      { type: 'user', id: resolved },
+      payload,
+      source,
+      () => this.officialBot.sendPrivateMessage(resolved, payload, source),
+    )
   }
 
-  async sendGroupMsg(groupId: string | number, message: any, source?: any) {
+  async sendGroupMsg(groupId: string | number, message: Sendable, source?: any) {
     const resolved = this.resolveGroupId(groupId)
-    return this.officialBot.sendGroupMessage(resolved, this.normalizeSendable(message), source)
+    const payload = this.normalizeSendable(message)
+    if (this.sendInterceptor) return this.sendInterceptor({ type: 'group', id: resolved }, payload, source)
+    return this.sendWithObservers(
+      { type: 'group', id: resolved },
+      payload,
+      source,
+      () => this.officialBot.sendGroupMessage(resolved, payload, source),
+    )
   }
 
-  async sendGuildMsg(channelId: string | number, message: any, source?: any) {
-    return this.officialBot.sendGuildMessage(String(channelId), this.normalizeSendable(message), source)
+  async sendGuildMsg(channelId: string | number, message: Sendable, source?: any) {
+    const resolved = String(channelId)
+    const payload = this.normalizeSendable(message)
+    if (this.sendInterceptor) return this.sendInterceptor({ type: 'channel', id: resolved }, payload, source)
+    return this.sendWithObservers(
+      { type: 'channel', id: resolved },
+      payload,
+      source,
+      () => this.officialBot.sendGuildMessage(resolved, payload, source),
+    )
+  }
+
+  async sendDirectMsg(guildId: string | number, message: Sendable, source?: any) {
+    const resolved = String(guildId)
+    const payload = this.normalizeSendable(message)
+    if (this.sendInterceptor) return this.sendInterceptor({ type: 'direct', id: resolved }, payload, source)
+    return this.sendWithObservers(
+      { type: 'direct', id: resolved },
+      payload,
+      source,
+      () => this.officialBot.sendDirectMessage(resolved, payload, source),
+    )
+  }
+
+  async withSendInterceptor<T>(interceptor: RuntimeSendInterceptor, task: () => Awaitable<T>): Promise<T> {
+    const previous = this.sendInterceptor
+    this.sendInterceptor = interceptor
+    try {
+      return await task()
+    } finally {
+      this.sendInterceptor = previous
+    }
+  }
+
+  onSend(observer: RuntimeSendObserver) {
+    this.sendObservers.add(observer)
+    return () => this.sendObservers.delete(observer)
+  }
+
+  private async sendWithObservers(target: RuntimeSendTarget, payload: Sendable, source: any, send: () => Awaitable<any>) {
+    const result = await send()
+    this.notifySendObservers(target, payload, source, result)
+    return result
+  }
+
+  private notifySendObservers(target: RuntimeSendTarget, payload: Sendable, source?: any, result?: any) {
+    for (const observer of this.sendObservers) {
+      void Promise.resolve(observer(target, payload, source, result)).catch(() => undefined)
+    }
+  }
+
+  async recallPrivateMsg(userId: string | number, messageId: string) {
+    return this.officialBot.recallPrivateMessage(this.resolveUserId(userId), messageId)
+  }
+
+  async recallGroupMsg(groupId: string | number, messageId: string) {
+    return this.officialBot.recallGroupMessage(this.resolveGroupId(groupId), messageId)
+  }
+
+  async recallGuildMsg(channelId: string | number, messageId: string) {
+    return this.officialBot.recallGuildMessage(String(channelId), messageId)
+  }
+
+  async recallDirectMsg(guildId: string | number, messageId: string, hideTip?: boolean) {
+    return this.officialBot.recallDirectMessage(String(guildId), messageId, hideTip)
+  }
+
+  async uploadMedia(targetId: string | number, targetType: 'user' | 'group', fileData: string | Buffer, options: Record<string, any> = {}) {
+    const resolvedId = targetType === 'group' ? this.resolveGroupId(targetId) : this.resolveUserId(targetId)
+    const uploadOptions = {
+      fileType: 1,
+      ...options,
+      targetId: resolvedId,
+      targetType,
+    }
+
+    if (typeof this.officialBot.uploadMedia === 'function') {
+      return this.officialBot.uploadMedia.length >= 3
+        ? this.officialBot.uploadMedia(resolvedId, targetType, fileData, options)
+        : this.officialBot.uploadMedia(fileData, uploadOptions)
+    }
+
+    if (typeof this.officialBot.fileProcessor?.uploadMedia === 'function') {
+      return this.officialBot.fileProcessor.uploadMedia(fileData, uploadOptions)
+    }
+
+    throw new UnsupportedAbilityError('bot.uploadMedia')
+  }
+
+  async getSelfInfo() {
+    return this.officialBot.getSelfInfo()
   }
 
   async makeForwardMsg(items: Array<{ nickname?: string; user_id?: string | number; message: any }>) {
@@ -78,7 +271,7 @@ export class QingBotRuntime {
     return createUnsupportedMember(String(groupId), String(userId))
   }
 
-  noticeGroups = async (groups: Array<string | number>, message: any) => {
+  noticeGroups = async (groups: Array<string | number>, message: Sendable) => {
     for (const group of groups) {
       await this.sendGroupMsg(group, message)
     }
@@ -130,6 +323,31 @@ export class QingBotRuntime {
     if (message.type === 'face') return `[表情:${message.data?.id || ''}]`
     return JSON.stringify(message)
   }
+
+  private withNormalizedSend<T extends object>(entry: T): T {
+    return new Proxy(entry, {
+      get: (target, property, receiver) => {
+        const value = Reflect.get(target, property, receiver)
+        if (property === 'send' && typeof value === 'function') {
+          return (message: Sendable, source?: any, ...args: any[]) => value.call(target, this.normalizeSendable(message), source, ...args)
+        }
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+    })
+  }
+
+  private getNativeEntry(methodName: 'group' | 'user' | 'channel' | 'direct' | 'guild', id: string): any {
+    const factory = this.officialBot[methodName]
+    if (typeof factory !== 'function') return undefined
+    const entry = factory.call(this.officialBot, id)
+    return entry && typeof entry === 'object' ? this.withNormalizedSend(entry) : undefined
+  }
+
+  private callBotMethod(methodName: string, ...args: any[]) {
+    const method = this.officialBot[methodName]
+    if (typeof method !== 'function') throw new UnsupportedAbilityError(`bot.${methodName}`)
+    return method.call(this.officialBot, ...args)
+  }
 }
 
 export function createContext(options: {
@@ -150,12 +368,40 @@ export function createContext(options: {
 
   const ctx: QingPluginContext = {
     bot: runtime,
+    config: {},
+    pluginDir: '',
+    configPath: '',
+    rootConfig: options.config,
+    logger: options.logger,
     http: axios,
     axios,
     fs,
     path,
     oicq: { segment },
+    segment,
+    markdown(contentOrTemplateId: string, params?: QingMarkdownParams) {
+      return segment.markdown(contentOrTemplateId, params)
+    },
+    replyMarkdown(event: any, contentOrTemplateId: string, params?: QingMarkdownParams) {
+      return event.reply(segment.markdown(contentOrTemplateId, params))
+    },
     handle: options.app.handle,
+    on(eventName, handler) {
+      return this.handle(eventName, handler)
+    },
+    command(commands: string | string[], handler: QingCommandHandler, commandOptions: QingCommandOptions = {}) {
+      const list = this.ensureArray(commands).map(String)
+      const trim = commandOptions.trim !== false
+      const ignoreCase = commandOptions.ignoreCase !== false
+
+      this.handle('message', async (event) => {
+        let text = this.getText(event)
+        if (trim) text = text.trim()
+        const input = ignoreCase ? text.toLowerCase() : text
+        const matched = list.find((command) => (ignoreCase ? command.toLowerCase() : command) === input)
+        if (matched) return handler(event, matched, this)
+      })
+    },
     hasRight(input: any) {
       const id = getInputUserId(input)
       return ownerIds().has(id) || adminIds().has(id)
@@ -188,6 +434,15 @@ export function createContext(options: {
     },
     getText(event: any) {
       return event?.raw_message || ''
+    },
+    getConfig<T extends Record<string, any> = Record<string, any>>(fallback?: T): T {
+      return { ...(fallback || {}), ...(this.config || {}) } as T
+    },
+    saveConfig(): never {
+      throw new UnsupportedAbilityError('ctx.saveConfig')
+    },
+    updateConfig(): never {
+      throw new UnsupportedAbilityError('ctx.updateConfig')
     },
     dedent,
     noticeGroups: runtime.noticeGroups,
@@ -286,6 +541,9 @@ export function normalizeEvent(event: any, runtime: QingBotRuntime, normalizeSen
     if (event.message_type === 'guild') {
       return runtime.sendGuildMsg(event.channel_id, payload, replySource)
     }
+    if (event.message_type === 'private' && event.sub_type === 'direct') {
+      return runtime.sendDirectMsg(event.guild_id, payload, replySource)
+    }
     return runtime.sendPrivateMsg(officialUserId || event.user_id, payload, replySource)
   }
 
@@ -303,7 +561,7 @@ export async function handleRuntimeError(error: unknown, event: any, logger: Log
     return
   }
   logger.error(error)
-  if (event?.reply) await event.reply(`QingBot 插件执行出错：${error instanceof Error ? error.message : String(error)}`)
+  if (event?.reply) await event.reply(`插件执行出错：${error instanceof Error ? error.message : String(error)}`)
 }
 
 function getInputUserId(input: any): string {

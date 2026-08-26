@@ -2,16 +2,31 @@ import fs from 'fs'
 import path from 'path'
 import axios from 'axios'
 import { segment as qqSegment } from 'qq-official-bot'
-import type { PluginDefinition } from './types'
+import type {
+  GroupMessageEvent as QQGroupMessageEvent,
+  GuildMessageEvent as QQGuildMessageEvent,
+  ImageElem as QQImageElem,
+  MessageElem as QQMessageElem,
+  PrivateMessageEvent as QQPrivateMessageEvent,
+  SegmentFactory,
+  Sendable as QQSendable,
+} from 'qq-official-bot'
+import type { PluginConfig, PluginDefinition } from './types'
 
-export function definePlugin(plugin: PluginDefinition): PluginDefinition {
+export function definePlugin<TConfig extends PluginConfig = PluginConfig>(plugin: PluginDefinition<TConfig>): PluginDefinition<TConfig> {
   return plugin
 }
 
 export const segment = {
   ...qqSegment,
-  image(file: string | Buffer, _cache?: boolean, _timeout?: number, _headers?: Record<string, string>) {
-    return qqSegment.image(file as any)
+  image(
+    file: string | Buffer,
+    optionsOrCache?: { url?: string; name?: string } | boolean,
+    _timeout?: number,
+    _headers?: Record<string, string>,
+  ) {
+    const options = typeof optionsOrCache === 'object' ? optionsOrCache : undefined
+    return qqSegment.image(file as any, options as any)
   },
   record(file: string | Buffer, options?: Record<string, unknown>) {
     return qqSegment.audio(file as any, options as any)
@@ -37,14 +52,16 @@ export function dedent(strings: TemplateStringsArray | string, ...values: unknow
   return lines.map((line) => line.slice(indent)).join('\n')
 }
 
-export type Sendable = any
-export type ImageElem = any
-export type MessageElem = any
+export type Sendable = QQSendable
+export type ImageElem = QQImageElem
+export type MessageElem = QQMessageElem
+export type Segment = SegmentFactory
 export type QingPluginContext = import('./types').QingPluginContext
 export type PluginContext = import('./types').QingPluginContext
 export type AllMessageEvent = any
-export type GroupMessageEvent = any
-export type PrivateMessageEvent = any
+export type GroupMessageEvent = QQGroupMessageEvent
+export type PrivateMessageEvent = QQPrivateMessageEvent
+export type GuildMessageEvent = QQGuildMessageEvent
 export type DiscussMessageEvent = any
 export type MusicPlatform = any
 

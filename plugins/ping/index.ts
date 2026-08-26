@@ -1,12 +1,19 @@
 import { definePlugin } from 'qingbot'
 
-export default definePlugin({
+type PingConfig = {
+  commands: string[]
+  reply: string
+}
+
+export default definePlugin<PingConfig>({
   name: 'ping',
   version: '1.0.0',
   setup(ctx) {
-    ctx.handle('message', async (event) => {
-      const text = ctx.getText(event).trim().toLowerCase()
-      if (text === 'ping' || text === '#ping') return event.reply('pong')
+    const config = ctx.getConfig({
+      commands: ['ping', '#ping'],
+      reply: 'pong',
     })
+
+    ctx.command(config.commands, (event) => event.reply(config.reply))
   },
 })

@@ -5,10 +5,11 @@ export type {
   AllMessageEvent,
   DiscussMessageEvent,
   GroupMessageEvent,
+  GuildMessageEvent,
   ImageElem,
   MessageElem,
   MusicPlatform,
   oicq,
   PrivateMessageEvent,
-  Sendable,
+  Segment,
 } from './plugin'

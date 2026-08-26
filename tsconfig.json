@@ -19,8 +19,7 @@
   },
   "include": [
     "src/**/*.ts",
-    "plugins/**/*.ts",
-    "qingbot.config.ts"
+    "plugins/**/*.ts"
   ],
   "exclude": [
     "dist",

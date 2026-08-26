@@ -3,8 +3,9 @@
   "appSecret": "YOUR_QQ_BOT_APP_SECRET",
   "sandbox": false,
   "botName": "QingBot",
+  "debug": false,
+  "removeAt": true,
   "plugins": ["ping"],
-  "pluginDir": "plugins",
   "web": {
     "enabled": true,
     "host": "127.0.0.1",
@@ -15,12 +16,9 @@
   "adminIds": [],
   "allowPublicControl": true,
   "aliases": {
-    "users": {
-      "OLD_USER_ID": "USER_OPENID_FROM_EVENT"
-    },
-    "groups": {
-      "OLD_GROUP_ID": "GROUP_OPENID_FROM_EVENT"
-    }
+    "users": {},
+    "groups": {}
   },
+  "legacyIdMode": "alias",
   "intents": ["GROUP_AND_C2C_EVENT"]
 }

@@ -5,14 +5,14 @@ export interface Logger {
   debug(...args: unknown[]): void
 }
 
-export function createLogger(scope = 'QingBot'): Logger {
+export function createLogger(scope = 'QingBot', debug = false): Logger {
   const prefix = `[${scope}]`
   return {
     info: (...args) => console.log(prefix, ...args),
     warn: (...args) => console.warn(prefix, ...args),
     error: (...args) => console.error(prefix, ...args),
     debug: (...args) => {
-      if (process.env.QINGBOT_DEBUG) console.debug(prefix, ...args)
+      if (debug) console.debug(prefix, ...args)
     },
   }
 }
