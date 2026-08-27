@@ -52,7 +52,7 @@ QingBot 会读取插件的 `dependencies`、`optionalDependencies` 和 `peerDepe
 npm install --prefix plugins/my-plugin
 ```
 
-Web 管理台的插件页会显示依赖是否已满足，并在缺失时显示当前运行目录对应的安装命令。QingBot 默认不会从 Web 管理台执行 npm 安装，避免把管理台变成远程命令入口。
+Web 管理台的插件页会显示依赖是否已满足，并在缺失时显示当前运行目录对应的安装命令。源码开发时通常是 `plugins/<name>`，编译运行时通常是 `dist/plugins/<name>`。QingBot 默认不会从 Web 管理台执行 npm 安装，避免把管理台变成远程命令入口。
 
 ## 最小插件
 

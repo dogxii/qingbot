@@ -26,7 +26,7 @@ const fallbackConfig = {
   },
   ownerIds: [],
   adminIds: [],
-  allowPublicControl: true,
+  allowPublicControl: false,
   aliases: {
     users: {},
     groups: {},

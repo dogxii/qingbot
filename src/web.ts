@@ -163,7 +163,9 @@ export function createWebConsole(target: WebConsoleTarget, config: QingBotWebCon
 }
 
 async function route(req: IncomingMessage, res: ServerResponse, target: WebConsoleTarget) {
-  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`)
+  const url = parseRequestUrl(req)
+  if (!url) return sendText(res, 400, 'Bad Request')
+
   const token = getWebToken(target)
 
   if (req.method === 'GET' && url.pathname === '/') {
@@ -178,7 +180,8 @@ async function route(req: IncomingMessage, res: ServerResponse, target: WebConso
   }
 
   if (!url.pathname.startsWith('/api/')) return sendText(res, 404, 'Not Found')
-  if (!isAuthorized(req, url, token)) return sendJson(res, 401, { ok: false, error: 'unauthorized' })
+  const allowQueryToken = req.method === 'GET' && url.pathname === '/api/media'
+  if (!isAuthorized(req, url, token, allowQueryToken)) return sendJson(res, 401, { ok: false, error: 'unauthorized' })
 
   try {
     if (req.method === 'GET' && url.pathname === '/api/status') {
@@ -285,22 +288,22 @@ function getWebToken(target: WebConsoleTarget, fallback?: QingBotWebConfig) {
   return target.getWebToken?.() || fallback?.token || ''
 }
 
-function isAuthorized(req: IncomingMessage, url: URL, token: string) {
+function isAuthorized(req: IncomingMessage, url: URL, token: string, allowQueryToken = false) {
   if (!token) return isLoopbackRequest(req, url)
   const header = req.headers.authorization || ''
-  return header === `Bearer ${token}` || url.searchParams.get('token') === token
+  return header === `Bearer ${token}` || (allowQueryToken && url.searchParams.get('token') === token)
 }
 
 function isLoopbackRequest(req: IncomingMessage, url: URL) {
-  return isLoopbackAddress(req.socket.remoteAddress || '') || isLoopbackHost(url.hostname)
+  return isLoopbackAddress(req.socket.remoteAddress || '') && isLoopbackHost(url.hostname)
 }
 
 function isLoopbackAddress(address: string) {
-  return ['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost'].includes(address)
+  return ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address)
 }
 
 function isLoopbackHost(host: string) {
-  return ['127.0.0.1', '::1', 'localhost'].includes(host)
+  return ['127.0.0.1', '::1', '[::1]', 'localhost'].includes(host)
 }
 
 function readJson(req: IncomingMessage): Promise<any> {
@@ -373,12 +376,20 @@ function sendFile(res: ServerResponse, filePath: string) {
 
 function getMediaContentType(filePath: string) {
   const ext = path.extname(filePath).toLowerCase()
+  if (ext === '.avif') return 'image/avif'
   if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg'
   if (ext === '.png') return 'image/png'
   if (ext === '.gif') return 'image/gif'
   if (ext === '.webp') return 'image/webp'
-  if (ext === '.svg') return 'image/svg+xml'
   return 'application/octet-stream'
+}
+
+function parseRequestUrl(req: IncomingMessage) {
+  try {
+    return new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`)
+  } catch {
+    return undefined
+  }
 }
 
 function renderPage(hasToken: boolean) {
@@ -2621,7 +2632,8 @@ function renderPage(hasToken: boolean) {
   <script>
     const needsToken = ${hasToken ? 'true' : 'false'}
     const qs = new URLSearchParams(location.search)
-    let token = qs.get('token') || localStorage.getItem('qingbot-token') || ''
+    const tokenFromQuery = qs.get('token') || ''
+    let token = tokenFromQuery || localStorage.getItem('qingbot-token') || ''
     let lastData = null
     let pluginFilter = 'all'
     let selectedPlugin = ''
@@ -2647,7 +2659,12 @@ function renderPage(hasToken: boolean) {
     let toastTimer = null
     let confirmHandler = null
 
-    if (qs.get('token')) localStorage.setItem('qingbot-token', qs.get('token'))
+    if (tokenFromQuery) {
+      localStorage.setItem('qingbot-token', tokenFromQuery)
+      qs.delete('token')
+      const search = qs.toString()
+      history.replaceState(null, '', location.pathname + (search ? '?' + search : '') + location.hash)
+    }
 
     const loginView = document.getElementById('loginView')
     const appView = document.getElementById('appView')

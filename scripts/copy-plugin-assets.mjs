@@ -5,6 +5,14 @@ import path from 'node:path'
 const sourceRoot = path.resolve('plugins')
 const targetRoot = path.resolve('dist/plugins')
 const ignoredDirs = new Set(['data', '.state', 'node_modules'])
+const ignoredFiles = new Set(['.DS_Store', '.env', '.npmrc', 'config.local.json'])
+
+function shouldCopyFile(name) {
+  if (ignoredFiles.has(name)) return false
+  if (/^\.env\./.test(name)) return false
+  if (/\.(ts|js|d\.ts|map|log|tsbuildinfo)$/i.test(name)) return false
+  return true
+}
 
 async function exists(filePath) {
   try {
@@ -27,7 +35,7 @@ async function copyAssets(sourceDir, targetDir) {
       continue
     }
 
-    if (/\.(ts|js|d\.ts|map)$/i.test(entry.name)) continue
+    if (!shouldCopyFile(entry.name)) continue
 
     await fs.mkdir(targetDir, { recursive: true })
     await fs.copyFile(sourcePath, targetPath)

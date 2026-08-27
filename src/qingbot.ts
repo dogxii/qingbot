@@ -30,6 +30,7 @@ const INTERNAL_PLUGIN = '__qingbot__'
 const PLUGIN_NAME_PATTERN = /^[a-zA-Z0-9._-]+$/
 const WEB_MESSAGE_LOG_LIMIT = 160
 const WEB_MESSAGE_TARGETS_FILE = path.join('data', 'web-message-targets.json')
+const WEB_MEDIA_EXTENSIONS = new Set(['.avif', '.gif', '.jpeg', '.jpg', '.png', '.webp'])
 
 type PluginCommand = {
   action: string
@@ -280,10 +281,18 @@ export class QingBot {
     const raw = String(source || '').trim().replace(/^file:\/\//, '')
     if (!raw || /^[a-z][a-z0-9+.-]*:/i.test(raw)) return undefined
 
-    const resolved = path.isAbsolute(raw) ? path.resolve(raw) : path.resolve(this.cwd, raw)
-    const root = path.resolve(this.cwd)
+    const candidate = path.isAbsolute(raw) ? path.resolve(raw) : path.resolve(this.cwd, raw)
+    const root = fs.realpathSync(this.cwd)
+    let resolved: string
+    try {
+      resolved = fs.realpathSync(candidate)
+    } catch {
+      return undefined
+    }
+
     if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) return undefined
-    if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) return undefined
+    if (!WEB_MEDIA_EXTENSIONS.has(path.extname(resolved).toLowerCase())) return undefined
+    if (!fs.statSync(resolved).isFile()) return undefined
     return resolved
   }
 
@@ -707,6 +716,11 @@ export class QingBot {
   }
 
   async loadPlugin(name: string) {
+    if (!this.isValidPluginName(name)) {
+      this.logger.warn(`插件名不合法：${name}`)
+      return false
+    }
+
     if (this.loadedPlugins.has(name)) return true
 
     const pluginDir = this.getPluginDir()
@@ -788,6 +802,7 @@ export class QingBot {
   }
 
   async reloadPlugin(name: string) {
+    if (!this.isValidPluginName(name)) return false
     const pluginDir = this.getPluginDir()
     await this.unloadPlugin(name)
     this.clearPluginCache(pluginDir, name)
@@ -1083,7 +1098,7 @@ export class QingBot {
 
   private readPluginDirectoryNames(pluginDir: string) {
     return fs.readdirSync(pluginDir)
-      .filter((name) => fs.statSync(path.join(pluginDir, name)).isDirectory())
+      .filter((name) => this.isValidPluginName(name) && fs.statSync(path.join(pluginDir, name)).isDirectory())
       .sort((left, right) => left.localeCompare(right))
   }
 
@@ -1091,7 +1106,7 @@ export class QingBot {
     const result: string[] = []
     for (const item of names) {
       const name = String(item || '').trim()
-      if (name && !result.includes(name)) result.push(name)
+      if (this.isValidPluginName(name) && !result.includes(name)) result.push(name)
     }
     return result
   }
@@ -1196,7 +1211,7 @@ export class QingBot {
   }
 
   private isValidPluginName(name: string) {
-    return PLUGIN_NAME_PATTERN.test(name)
+    return PLUGIN_NAME_PATTERN.test(name) && name !== '.' && name !== '..'
   }
 
   private formatMenu() {

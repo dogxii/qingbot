@@ -1,5 +1,4 @@
 node_modules/
-dist/
 .playwright-cli/
 output/
 /data/
@@ -7,7 +6,6 @@ output/
 .DS_Store
 .env
 .env.*
-!.env.example
 .npmrc
 *.tsbuildinfo
 *.log
@@ -18,3 +16,7 @@ plugins/*/config.json
 plugins/*/config.local.json
 plugins/*/data/
 plugins/*/.state/
+dist/plugins/*/config.json
+dist/plugins/*/config.local.json
+dist/plugins/*/data/
+dist/plugins/*/.state/

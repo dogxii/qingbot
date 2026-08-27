@@ -4,13 +4,15 @@
 
 ## 启动
 
+环境要求：Node.js 20+，npm。
+
 ```bash
 npm install
 npm run init
 npm run dev
 ```
 
-`npm run init` 会交互式创建或更新根目录的 `config.json`，可填写 QQ 官方机器人的 `appID`、`appSecret`、插件列表、管理员 ID 和 Web 管理台 token。`config.json` 默认不提交，避免把密钥带进 Git。
+`npm run init` 会交互式创建或更新根目录的 `config.json`，可填写 QQ 官方机器人的 `appID`、`appSecret`、插件列表、管理员 ID 和 Web 管理台 token。`config.json` 默认不提交，避免把密钥带进 Git。首次使用建议至少填写一个 `ownerIds` 或 `adminIds`。
 
 编译运行：
 
@@ -40,7 +42,7 @@ QingBot 读取根目录的 `config.json`，仓库里的 `config.example.json` �
   },
   "ownerIds": [],
   "adminIds": [],
-  "allowPublicControl": true,
+  "allowPublicControl": false,
   "aliases": {
     "users": {},
     "groups": {}
@@ -53,7 +55,7 @@ QingBot 读取根目录的 `config.json`，仓库里的 `config.example.json` �
 常用项：
 
 - `ownerIds` / `adminIds`：管理命令权限。
-- `allowPublicControl`：没有管理员时是否允许公开控制，测试期可用 `true`。
+- `allowPublicControl`：没有管理员时是否允许公开控制，默认 `false`；仅建议在完全隔离的本地测试环境临时设为 `true`。
 - `plugins`：启用插件，数组项是插件目录名。
 - `pluginDir`：插件目录，默认 `plugins`，可指向外部私有插件目录。
 - `web.token`：Web 管理台访问令牌；未设置时 API 只接受本机访问。
@@ -95,7 +97,7 @@ ping
 http://127.0.0.1:3300
 ```
 
-可查看状态、启用/禁用/重载插件、编辑 JSON 配置、重载配置和关闭进程。
+可查看状态、启用/禁用/重载插件、编辑配置、查看收发消息、手动发送消息、模拟插件对话、重载配置和关闭进程。
 
 配置页可以管理：
 
@@ -111,6 +113,14 @@ http://127.0.0.1:3300
 - 不要把未设置 `web.token` 的管理台通过 Nginx/Caddy 等反代暴露到公网。
 - 如果必须公网访问，设置足够长的随机 `web.token`，反代只走 HTTPS，并额外加访问控制或 IP 白名单。
 - 防火墙不要放开 `3300` 直连端口；让管理台只被受控入口访问。
+- 安全问题和凭据泄露处理见 [`SECURITY.md`](SECURITY.md)。
+
+本地检查：
+
+```bash
+npm run check
+npm audit
+```
 
 ## 插件
 
@@ -128,7 +138,7 @@ plugins/my-plugin/config.json
 npm install --prefix plugins/my-plugin
 ```
 
-QingBot 会在启动和管理台插件页检测插件依赖；必需依赖缺失时不会加载该插件，并会提示缺失包和当前运行目录对应的安装命令。
+QingBot 会在启动和管理台插件页检测插件依赖；必需依赖缺失时不会加载该插件，并会提示缺失包和当前运行目录对应的安装命令。`npm run dev` 使用 `plugins/<name>`，`npm start` 使用编译后的 `dist/plugins/<name>`，按提示命令安装即可。
 
 插件内直接读取当前插件配置：
 
@@ -171,3 +181,7 @@ export default definePlugin<MyConfig>({
 本地生成的数据建议放在插件目录的 `data/` 或 `.state/` 中，这两个目录默认不会提交。
 
 更多事件名、消息段和主动发送示例见 `plugins/README.md`。
+
+## 许可
+
+ISC

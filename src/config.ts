@@ -66,7 +66,7 @@ export function loadConfig(cwd = process.cwd()): QingBotConfig {
     },
     ownerIds: fileConfig.ownerIds || [],
     adminIds: fileConfig.adminIds || [],
-    allowPublicControl: readBoolean(fileConfig.allowPublicControl, true),
+    allowPublicControl: readBoolean(fileConfig.allowPublicControl, false),
     aliases: fileConfig.aliases || {},
     legacyIdMode: fileConfig.legacyIdMode || 'alias',
     intents: Array.isArray(fileConfig.intents)
