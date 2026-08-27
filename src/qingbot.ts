@@ -1200,28 +1200,30 @@ export class QingBot {
   }
 
   private formatMenu() {
+    const command = (name: string, description: string) => `\`${name}\` - ${description}`
     const commands = [
-      '#插件 列表 - 查看所有插件状态',
-      '#插件 启用 插件名 - 启用插件并写入配置',
-      '#插件 禁用 插件名 - 禁用插件并写入配置',
-      '#插件 重载 [插件名] - 重载插件',
-      '#重载 - 重新读取配置',
-      '#状态 - 查看运行状态',
-      '#关机 - 优雅关闭进程',
+      command('#插件 列表', '查看所有插件状态'),
+      command('#插件 启用 插件名', '启用插件并写入配置'),
+      command('#插件 禁用 插件名', '禁用插件并写入配置'),
+      command('#插件 重载 [插件名]', '重载插件'),
+      command('#重载', '重新读取配置'),
+      command('#状态', '查看运行状态'),
+      command('#关机', '优雅关闭进程'),
     ]
-    if (this.loadedPlugins.has('ping')) commands.unshift('ping - 连通性测试')
+    if (this.loadedPlugins.has('ping')) commands.unshift(command('ping', '连通性测试'))
     return commands.join('\n')
   }
 
   private formatPluginHelp() {
+    const command = (name: string, description: string) => `\`${name}\` - ${description}`
     return [
-      '#插件 列表 - 查看插件目录、启用状态和加载状态',
-      '#插件 启用 插件名 - 写入配置并加载插件',
-      '#插件 禁用 插件名 - 从配置移除并卸载插件',
-      '#插件 重载 - 重载所有已启用插件',
-      '#插件 重载 插件名 - 重载单个已启用插件',
-      '#重载 - 重新读取 config.json / config.local.json 并同步插件',
-      '#状态 - 查看运行状态',
+      command('#插件 列表', '查看插件目录、启用状态和加载状态'),
+      command('#插件 启用 插件名', '写入配置并加载插件'),
+      command('#插件 禁用 插件名', '从配置移除并卸载插件'),
+      command('#插件 重载', '重载所有已启用插件'),
+      command('#插件 重载 插件名', '重载单个已启用插件'),
+      command('#重载', '重新读取 config.json / config.local.json 并同步插件'),
+      command('#状态', '查看运行状态'),
     ].join('\n')
   }
 
