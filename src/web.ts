@@ -412,6 +412,8 @@ function renderPage(hasToken: boolean) {
       --ink: oklch(24.7% .006 258.361);
       --ink-2: oklch(50.6% .01 264.477);
       --ink-3: oklch(69.5% .009 264.505);
+      --primary: oklch(24.7% .006 258.361);
+      --primary-ink: oklch(100% 0 0);
       --line: oklch(94.6% .003 264.542);
       --line-soft: oklch(94.6% .003 264.542);
       --line-strong: oklch(91.2% .005 258.326);
@@ -444,6 +446,8 @@ function renderPage(hasToken: boolean) {
         --ink: oklch(96.4% .002 247.839);
         --ink-2: oklch(73.1% .008 260.731);
         --ink-3: oklch(54.1% .01 264.484);
+        --primary: oklch(96.4% .002 247.839);
+        --primary-ink: oklch(20.9% .004 264.477);
         --line: oklch(30.8% .006 258.354);
         --line-soft: oklch(30.8% .006 258.354);
         --line-strong: oklch(35.6% .007 264.474);
@@ -475,6 +479,8 @@ function renderPage(hasToken: boolean) {
       --ink: oklch(96.4% .002 247.839);
       --ink-2: oklch(73.1% .008 260.731);
       --ink-3: oklch(54.1% .01 264.484);
+      --primary: oklch(96.4% .002 247.839);
+      --primary-ink: oklch(20.9% .004 264.477);
       --line: oklch(30.8% .006 258.354);
       --line-soft: oklch(30.8% .006 258.354);
       --line-strong: oklch(35.6% .007 264.474);
@@ -522,6 +528,7 @@ function renderPage(hasToken: boolean) {
       cursor: pointer;
       font-size: 13px;
       font-weight: 650;
+      touch-action: manipulation;
       white-space: nowrap;
       transition: background-color .14s ease, border-color .14s ease, color .14s ease, transform .14s ease;
     }
@@ -533,14 +540,14 @@ function renderPage(hasToken: boolean) {
       transform: none;
     }
     button.primary {
-      border-color: var(--ink);
-      background: var(--ink);
-      color: var(--surface);
+      border-color: var(--primary);
+      background: var(--primary);
+      color: var(--primary-ink);
       box-shadow: var(--button-shadow);
     }
     button.primary:hover {
-      border-color: var(--ink);
-      background: color-mix(in srgb, var(--ink) 92%, var(--surface));
+      border-color: var(--primary);
+      background: color-mix(in srgb, var(--primary) 92%, var(--surface));
     }
     button.ghost {
       border-color: transparent;
@@ -629,19 +636,6 @@ function renderPage(hasToken: boolean) {
     button.icon-button:hover {
       background: var(--hover);
       color: var(--ink);
-    }
-    .brand-mark {
-      display: grid;
-      width: 28px;
-      height: 28px;
-      place-items: center;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      background: var(--field);
-      color: var(--ink);
-      font-size: 14px;
-      font-weight: 800;
-      box-shadow: var(--button-shadow);
     }
     .login-title {
       margin: 0;
@@ -1758,6 +1752,8 @@ function renderPage(hasToken: boolean) {
       }
       .app-shell {
         grid-template-columns: 1fr;
+        grid-auto-rows: max-content;
+        align-content: start;
       }
       body.sidebar-collapsed .app-shell {
         grid-template-columns: 1fr;
@@ -1780,7 +1776,7 @@ function renderPage(hasToken: boolean) {
         height: auto;
         z-index: 10;
         gap: 0;
-        padding: 12px 14px;
+        padding: 10px 14px;
         border-right: 0;
         border-bottom: 1px dashed var(--rail-border);
         overflow: visible;
@@ -1789,8 +1785,15 @@ function renderPage(hasToken: boolean) {
         display: none;
       }
       .workspace-row {
-        min-height: 38px;
+        min-height: 36px;
         margin: 0;
+      }
+      .workspace-button {
+        flex: 0 1 auto;
+        max-width: calc(100% - 44px);
+      }
+      #sidebarToggle {
+        margin-left: auto;
       }
       .rail .brand-row {
         justify-content: flex-start;
@@ -1801,7 +1804,7 @@ function renderPage(hasToken: boolean) {
       }
       .nav-popover {
         position: absolute;
-        top: 54px;
+        top: calc(100% - 4px);
         right: 14px;
         z-index: 20;
         display: none;
@@ -1832,24 +1835,34 @@ function renderPage(hasToken: boolean) {
         display: flex;
       }
       .workspace {
-        padding: 24px 20px 44px;
+        padding: 16px 16px 44px;
+      }
+      .topbar {
+        min-height: 38px;
+        margin-bottom: 12px;
       }
       .metrics {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
     @media (max-width: 680px) {
-      .topbar,
       .section-head,
       .toolbar,
       .config-toolbar {
         align-items: flex-start;
         flex-direction: column;
       }
+      .topbar {
+        align-items: center;
+        flex-direction: row;
+        gap: 10px;
+      }
+      .topbar > div:first-child {
+        min-width: 0;
+      }
       h2 {
         font-size: 22px;
       }
-      .top-actions,
       .actions,
       .toolbar-main,
       .config-actions,
@@ -1858,6 +1871,11 @@ function renderPage(hasToken: boolean) {
       .work-grid,
       .message-grid {
         width: 100%;
+      }
+      .top-actions {
+        width: auto;
+        flex: 0 0 auto;
+        justify-content: flex-end;
       }
       #pluginSearch,
       .config-select {
@@ -2032,7 +2050,6 @@ function renderPage(hasToken: boolean) {
   <div class="login" id="loginView" ${hasToken ? '' : 'hidden'}>
     <section class="login-panel">
       <div class="brand-row">
-        <div class="brand-mark">Q</div>
         <div>
           <h1 class="login-title">QingBot</h1>
           <p class="login-subtitle">管理入口</p>
@@ -2055,12 +2072,12 @@ function renderPage(hasToken: boolean) {
             <h1 id="botName">QingBot</h1>
           </div>
         </button>
-        <button class="icon-button" id="sidebarToggle" type="button" aria-label="折叠侧栏">
+        <button class="icon-button" id="sidebarToggle" type="button" aria-label="折叠侧栏" aria-controls="navigationPanel" aria-expanded="true">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
         </button>
       </div>
 
-      <div class="nav-popover">
+      <div class="nav-popover" id="navigationPanel">
         <nav class="nav-list" aria-label="管理导航">
           <button class="nav active" data-tab="overview" data-title="主页"><span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg></span><span class="sidebar-copy">主页</span></button>
           <button class="nav" data-tab="plugins" data-title="插件"><span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8v6H8zM4 15h7v6H4zM13 15h7v6h-7z"/><path d="M12 9v3M7.5 12h9"/></svg></span><span class="sidebar-copy">插件</span></button>
@@ -2697,7 +2714,7 @@ function renderPage(hasToken: boolean) {
           return
         }
         localStorage.setItem('qingbot-token', token)
-        if (!(await refresh())) {
+        if (!(await refresh()) && !token) {
           localStorage.removeItem('qingbot-token')
         }
       })
@@ -2714,16 +2731,27 @@ function renderPage(hasToken: boolean) {
       })
     })
     if (sidebarToggle) {
-      sidebarToggle.addEventListener('click', () => {
-        if (isMobileNav()) setMobileNavOpen(!document.body.classList.contains('mobile-nav-open'))
-        else setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'))
+      sidebarToggle.addEventListener('pointerdown', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        toggleNavigation()
+      })
+      sidebarToggle.addEventListener('click', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+      })
+      sidebarToggle.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        event.stopPropagation()
+        toggleNavigation()
       })
     }
-    document.addEventListener('click', (event) => {
+    document.addEventListener('pointerdown', (event) => {
       if (!isMobileNav() || !document.body.classList.contains('mobile-nav-open')) return
       if (event.target?.closest?.('.rail')) return
       setMobileNavOpen(false)
-    })
+    }, true)
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && isMobileNav()) setMobileNavOpen(false)
     })
@@ -2903,6 +2931,10 @@ function renderPage(hasToken: boolean) {
       document.body.classList.toggle('sidebar-collapsed', collapsed)
       syncNavigationToggle()
     }
+    function toggleNavigation() {
+      if (isMobileNav()) setMobileNavOpen(!document.body.classList.contains('mobile-nav-open'))
+      else setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'))
+    }
     function setMobileNavOpen(open) {
       document.body.classList.toggle('mobile-nav-open', open)
       syncNavigationToggle()
@@ -2919,6 +2951,7 @@ function renderPage(hasToken: boolean) {
       const label = mobile ? (menuOpen ? '关闭菜单' : '打开菜单') : (collapsed ? '展开侧栏' : '折叠侧栏')
       sidebarToggle.innerHTML = mobile ? (menuOpen ? closeIcon : menuIcon) : (collapsed ? sidebarExpandIcon : sidebarCollapseIcon)
       sidebarToggle.setAttribute('aria-label', label)
+      sidebarToggle.setAttribute('aria-expanded', String(mobile ? menuOpen : !collapsed))
       sidebarToggle.title = label
     }
     function switchTab(name, title) {
@@ -3075,13 +3108,22 @@ function renderPage(hasToken: boolean) {
       }
       return json.data ?? json
     }
-    function showLogin(message = '') {
+    function clearStoredToken() {
+      token = ''
+      localStorage.removeItem('qingbot-token')
+    }
+    function showLogin(message = '', options = {}) {
       if (!needsToken) return
+      const wasHidden = loginView.hidden
       appView.hidden = true
       loginView.hidden = false
       loginError.textContent = message
-      loginTokenInput.value = token
-      loginTokenInput.focus()
+      if (options.syncToken) {
+        loginTokenInput.value = token
+      } else if (token && !loginTokenInput.value) {
+        loginTokenInput.value = token
+      }
+      if (wasHidden && document.activeElement !== loginTokenInput) loginTokenInput.focus()
     }
     function showApp() {
       loginView.hidden = true
@@ -3089,7 +3131,7 @@ function renderPage(hasToken: boolean) {
     }
     async function refresh() {
       if (needsToken && !token) {
-        showLogin()
+        if (loginView.hidden) showLogin()
         return false
       }
       if (statusRefreshInFlight) return true
@@ -3131,8 +3173,8 @@ function renderPage(hasToken: boolean) {
         return true
       } catch (error) {
         if (needsToken && error.status === 401) {
-          token = ''
-          showLogin('Token 不正确或已失效')
+          clearStoredToken()
+          showLogin('Token 不正确或已失效', { syncToken: true })
         } else {
           setText('overviewState', needsToken ? '需要 Token' : '离线')
         }
@@ -3769,7 +3811,10 @@ function renderPage(hasToken: boolean) {
       confirmHandler = null
     }
     function handleApiError(error) {
-      if (needsToken && error.status === 401) showLogin('Token 不正确或已失效')
+      if (needsToken && error.status === 401) {
+        clearStoredToken()
+        showLogin('Token 不正确或已失效', { syncToken: true })
+      }
       else show(error.message)
     }
     function readConfigObject() {
@@ -3997,9 +4042,8 @@ function renderPage(hasToken: boolean) {
       post(path, { name: selectedPlugin })
     }
     function logout() {
-      token = ''
-      localStorage.removeItem('qingbot-token')
-      showLogin()
+      clearStoredToken()
+      showLogin('', { syncToken: true })
     }
     function stopBot() {
       openConfirmDialog('关闭后需要在终端重新启动。', () => post('/api/stop'))
